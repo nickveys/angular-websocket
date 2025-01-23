@@ -1,17 +1,6 @@
 import angular from 'angular';
 
-var Socket;
-
-if (typeof window === 'undefined') {
-  try {
-    var ws = require('ws');
-
-    Socket = (ws.Client || ws.client || ws);
-  } catch(e) {}
-}
-
-// Browser
-Socket = (Socket || window.WebSocket || window.MozWebSocket);
+var Socket = (window.WebSocket || window.MozWebSocket);
 
 var noop = angular.noop;
 var objectFreeze  = (Object.freeze) ? Object.freeze : noop;
@@ -43,12 +32,12 @@ if (!Array.prototype.indexOf) {
 // $WebSocketProvider.$inject = ['$rootScope', '$q', '$timeout', '$websocketBackend'];
 function $WebSocketProvider($rootScope, $q, $timeout, $websocketBackend) {
 
-  function $WebSocket(url, protocols, options, wsOptions = {}) {
+  function $WebSocket(url, protocols, options) {
     if (!options && isObject(protocols) && !isArray(protocols)) {
       options = protocols;
       protocols = undefined;
     }
-    this.wsOptions = wsOptions;
+
     this.protocols = protocols;
     this.url = url || 'Missing URL';
     this.ssl = /(wss)/i.test(this.url);
@@ -121,7 +110,7 @@ function $WebSocketProvider($rootScope, $q, $timeout, $websocketBackend) {
 
   $WebSocket.prototype._connect = function _connect(force) {
     if (force || !this.socket || this.socket.readyState !== this._readyStateConstants.OPEN) {
-      this.socket = $websocketBackend.create(this.url, this.protocols, this.wsOptions);
+      this.socket = $websocketBackend.create(this.url, this.protocols);
       this.socket.onmessage = angular.bind(this, this._onMessageHandler);
       this.socket.onopen  = angular.bind(this, this._onOpenHandler);
       this.socket.onerror = angular.bind(this, this._onErrorHandler);
@@ -367,17 +356,13 @@ function $WebSocketProvider($rootScope, $q, $timeout, $websocketBackend) {
 
 // $WebSocketBackendProvider.$inject = ['$log'];
 function $WebSocketBackendProvider($log) {
-  this.create = function create(url, protocols, options) {
+  this.create = function create(url, protocols) {
     var match = /wss?:\/\//.exec(url);
 
     if (!match) {
       throw new Error('Invalid url provided');
     }
 
-    if (options) {
-      return new Socket(url, protocols, options);
-    }
-    
     if (protocols) {
       return new Socket(url, protocols);
     }
